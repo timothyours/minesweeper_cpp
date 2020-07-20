@@ -1,6 +1,6 @@
 # minesweeper_cpp
 ## Intro
-&nbsp;&nbsp;&nbsp;&nbsp;minesweeper_cpp is a version of minesweeper that I made in C++ that uses SFML. The goal was to get used to using C++ again as well as the linux environment, cmake, and github. That is it at the moment, but this is going to be my test bench for as many things as possible.
+&nbsp;&nbsp;&nbsp;&nbsp;minesweeper_cpp is a version of minesweeper that I made in C++ that uses SFML. The goal was to get used to using C++ again as well as the Linux environment, CMake, and GitHub. That is it at the moment, but this is going to be my test bench for as many things as possible.
 
 ## Requirements
 To run this program you will need:
@@ -9,8 +9,11 @@ To run this program you will need:
 
 ## Build
 To build and run:  
-    cmake .  
-    make
+
+```
+cmake .
+make
+```
 
 ## Parameters
 This program has a few optional parameters:
