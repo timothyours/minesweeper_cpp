@@ -11,7 +11,6 @@
 const int border = 5;
 const int tile_size = 16;
 const int offset_y = border * 2 + tile_size;
-const int scale = 1;
 
 
 
@@ -25,6 +24,22 @@ int clamp(int i, int low, int high) {
 	}
 
 	return i;
+}
+
+
+
+//INPUT FUNCTIONS
+//Check if mouse is in tile field
+bool mouse_in_tiles(sf::Vector2i mouse, int window_width, int window_height, int scale) {
+	return mouse.x >= border * scale && mouse.x < window_width - border * scale &&
+		   mouse.y >= offset_y * scale && mouse.y < window_height - border * scale;
+}
+
+//Check if the mouse is on the face
+bool mouse_on_face(sf::Vector2i mouse, int window_width, int scale) {
+	return mouse.x >= window_width / 2 - tile_size / 2 * scale &&
+		   mouse.x < window_width / 2 + tile_size / 2 * scale &&
+		   mouse.y >= border * scale && mouse.y < (border + tile_size) * scale;
 }
 
 
@@ -183,12 +198,24 @@ void draw_cursor(sf::RenderWindow &window, int cursor_x, int cursor_y, int size_
 
 
 //Main Function
-int main() {
+int main(int argc, char **argv) {
 	//Setup game parameters
-	int size_x = 16, size_y = 8;
-	int bomb_count = 20;
-	int bombs_left = bomb_count;
-	const int scale = 2;
+	int size_x, size_y, bomb_count, scale;
+
+	if(argc < 3) {
+		size_x = 16;
+		size_y = 16;
+	} else {
+		size_x = std::stoi(argv[1]);
+		size_y = std::stoi(argv[2]);
+	}
+	
+	if(argc < 4) bomb_count = (int)(size_x * size_y * 0.15625);
+	else bomb_count = std::stoi(argv[3]);
+
+
+	if(argc < 5) scale = 2;
+	else scale = std::stoi(argv[4]);
 
 	//State vars
 	bool started = false;
@@ -196,7 +223,12 @@ int main() {
 	bool won = false;
 	
 	//Other
-	int cursor_x = 0, cursor_y = 0;
+	int cursor_x = 0, cursor_y = 0, previous_cursor_x = 0, previous_cursor_y = 0;
+	int bombs_left = bomb_count;
+	int window_width = (size_x * tile_size + border * 2) * scale;
+	int window_height = ((size_y + 1) * tile_size + border * 3) * scale;
+	sf::Vector2i previous_mouse;
+	sf::Vector2i current_mouse;
 
 	//Setup timer
 	sf::Clock clock;
@@ -261,7 +293,8 @@ int main() {
 
 
 	//Create window
-	sf::RenderWindow window(sf::VideoMode((size_x * tile_size + border * 2) * scale, ((size_y + 1) * tile_size + border * 3) * scale), "Minesweeper");
+	sf::RenderWindow window(sf::VideoMode(window_width, window_height), "Minesweeper");
+	previous_mouse = sf::Mouse::getPosition(window);
 
 
 
@@ -269,14 +302,16 @@ int main() {
 	bool wait = false;
 
 	while(window.isOpen()) {
-		
 		sf::Event event;
+
 		while(window.pollEvent(event)) {
 			if(event.type == sf::Event::Closed) {
 				window.close();
 				break;
-			} if(event.type == sf::Event::KeyPressed) {
-                //Handle movement keys
+			}
+			
+            //Handle movement keys
+			if(event.type == sf::Event::KeyPressed || event.type == sf::Event::MouseButtonPressed) {
 				if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
 					cursor_y--;
 				}
@@ -299,22 +334,30 @@ int main() {
 
 
                 //Handle revealing and resetting
-				if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space) || sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
-					if(cursor_y != -1 && !started) {
+				if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space) ||
+				   sf::Keyboard::isKeyPressed(sf::Keyboard::X) ||
+				   (sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
+					if(cursor_y != -1 && !started &&
+					   !(sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
+					   !mouse_in_tiles(current_mouse, window_width, window_height, scale))) {
 						populate_board(board, size_x, size_y, bomb_count, cursor_x, cursor_y);
 						clock.restart();
 
 						started = true;
 					}
 					
-					if(cursor_y == -1 && started) {
+					if(cursor_y == -1 && started &&
+					   !(sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
+					   !mouse_on_face(current_mouse, window_width, scale))) {
 						reset_board(board, size_x, size_y);
 						reset_board(board_states, size_x, size_y);
 						started = false;
 						ended = false;
 						won = false;
 						bombs_left = bomb_count;
-					} else if(!ended && started) {
+					} else if(!ended && started &&
+							  !(sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
+							  !mouse_in_tiles(current_mouse, window_width, window_height, scale))) {
 						if(reveal(board, board_states, cursor_x, cursor_y, size_x, size_y)) {
 							reveal_bombs(board, board_states, size_x, size_y);
 							ended = true;
@@ -322,6 +365,7 @@ int main() {
 							std::cout << "Ended, bomb tripped." << std::endl;
 						} else if(check_squares(board, board_states, size_x, size_y)) {
 							flag_bombs(board, board_states, size_x, size_y);
+							bombs_left = 0;
 							won = true;
 							ended = true;
 							
@@ -329,9 +373,15 @@ int main() {
 						}
 						time_ended = std::to_string((int)clock.getElapsedTime().asSeconds());
 					}
+				} 
+				
                 //Handle flagging
-				} else if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
-					if(!ended) {
+				if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ||
+						  sf::Keyboard::isKeyPressed(sf::Keyboard::Z) ||
+						  sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
+					if(!ended &&
+					   !(sf::Mouse::isButtonPressed(sf::Mouse::Right) &&
+					   !mouse_in_tiles(current_mouse, window_width, window_height, scale))) {
 						if(board_states[cursor_y][cursor_x] == 0) {
 							board_states[cursor_y][cursor_x] = 2;
 							bombs_left--;
@@ -343,6 +393,34 @@ int main() {
 				}
 
 				wait = false;
+			}
+			
+
+
+			//Handle mouse movement
+			if(event.type == sf::Event::MouseMoved) {
+				current_mouse = sf::Mouse::getPosition(window);
+		
+				if(!(current_mouse.x == previous_mouse.x && current_mouse.y == previous_mouse.y)) {
+					previous_cursor_x = cursor_x;
+					previous_cursor_y = cursor_y;
+			
+					if(mouse_in_tiles(current_mouse, window_width, window_height, scale)) {
+						cursor_x = (int)((current_mouse.x / scale - border) / tile_size);
+						cursor_y = (int)((current_mouse.y / scale - offset_y) / tile_size);
+					}
+
+					if(mouse_on_face(current_mouse, window_width, scale)) {
+						cursor_x = size_x / 2 - 1;
+						cursor_y = -1;
+					}
+			
+					if(!(cursor_x == previous_cursor_x && cursor_y == previous_cursor_y)) {
+						wait = false;
+					}
+				}
+
+				previous_mouse = current_mouse;
 			}
 		}
 
