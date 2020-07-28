@@ -24,5 +24,5 @@ This program has a few optional parameters:
 | Bomb count    | columns * rows * (40 / 256)   |
 | Draw scale    | 2                             |
 
-## Issues
-&nbsp;&nbsp;&nbsp;&nbsp;There are no known bugs with the program itself, I'm just not familiar enough with getting SFML to actually use OpenGL. However that is a problem with my environment and once I figure it out I'll write something in here so I remember.
+## Note to Self
+Windows Subsystem for Linux does not like the -wgl flag for VcXsrv which is the check box for using native OpenGL in XLaunch. Using that makes WSL fail to us OpenGL and the program runs very poorly. Don't forget about this.
