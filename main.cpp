@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "Board.h"
+
 #include <SFML/Graphics.hpp>
 
 
@@ -40,117 +42,6 @@ bool mouse_on_face(sf::Vector2i mouse, int window_width, int scale) {
 	return mouse.x >= window_width / 2 - tile_size / 2 * scale &&
 		   mouse.x < window_width / 2 + tile_size / 2 * scale &&
 		   mouse.y >= border * scale && mouse.y < (border + tile_size) * scale;
-}
-
-
-
-//GAME FUNCTIONS
-//Clears board
-void reset_board(int **board, int size_x, int size_y) {
-	//Set all positions to 0
-	for(int y = 0; y < size_y; y++) {
-		for(int x = 0; x < size_x; x++) {
-			board[y][x] = 0;
-		}
-	}
-}
-
-//Sets up board with bombs and adjacent counts
-void populate_board(int **board, int size_x, int size_y, int bombs_left, int cursor_x, int cursor_y) {
-	int x, y;
-	
-	//Place bombs
-	while(bombs_left > 0) {
-		x = rand() % size_x;
-		y = rand() % size_y;
-
-		//If clear, place bomb
-		if(board[y][x] < 9 && !((x <= cursor_x + 1 && x >= cursor_x - 1 ) && (y <= cursor_y + 1 && y >= cursor_y - 1 ))) {
-			board[y][x] = 9;
-			bombs_left--;
-
-			//Change adjacent counts
-			if(y - 1 >= 0 &&						board[y - 1][x] < 9)		board[y - 1][x]++;
-			if(y - 1 >= 0 &&	x + 1 < size_x &&	board[y - 1][x + 1] < 9)	board[y - 1][x + 1]++;
-			if(x + 1 < size_x &&					board[y][x + 1] < 9)		board[y][x + 1]++;
-			if(y + 1 < size_y && x + 1 < size_x &&	board[y + 1][x + 1] < 9)	board[y + 1][x + 1]++;
-			if(y + 1 < size_y &&					board[y + 1][x] < 9)		board[y + 1][x]++;
-			if(y + 1 < size_y && x - 1 >= 0 &&		board[y + 1][x - 1] < 9)	board[y + 1][x - 1]++;
-			if(x - 1 >= 0 &&						board[y][x - 1] < 9)		board[y][x - 1]++;
-			if(y - 1 >= 0 &&	x - 1 >= 0 &&		board[y - 1][x - 1] < 9)	board[y - 1][x - 1]++;
-		}
-	}
-} 
-
-//Print board for debugging
-/*void print_board(int **board, int size_x, int size_y) {
-	for(int y = 0; y < size_y; y++) {
-		for(int x = 0; x < size_x; x++) {
-			std::cout << board[y][x];
-			if(x != size_x - 1) std::cout << ", ";
-		}
-		std::cout << std::endl;
-	}
-	std::cout << std::endl;
-}*/
-
-//Reveal tile, recursive call for adjacent tiles if current tile has not adjacent bombs
-bool reveal(int **board, int **board_states, int x, int y, int size_x, int size_y) {
-	if(board_states[y][x] == 0) {
-		board_states[y][x] = 1;
-		
-		if(board[y][x] == 9) {
-			board[y][x] = 10;
-			return true;
-		} else if(board[y][x] == 0) {
-			if(y - 1 >= 0)							reveal(board, board_states, x, y - 1, size_x, size_y);
-			if(y - 1 >= 0 &&	x + 1 < size_x)		reveal(board, board_states, x + 1, y - 1, size_x, size_y);
-			if(x + 1 < size_x)						reveal(board, board_states, x + 1, y, size_x, size_y);
-			if(y + 1 < size_y && x + 1 < size_x)	reveal(board, board_states, x + 1, y + 1, size_x, size_y);
-			if(y + 1 < size_y)						reveal(board, board_states, x, y + 1, size_x, size_y);
-			if(y + 1 < size_y && x - 1 >= 0)		reveal(board, board_states, x - 1, y + 1, size_x, size_y);
-			if(x - 1 >= 0)							reveal(board, board_states, x - 1, y, size_x, size_y);
-			if(y - 1 >= 0 && x - 1 >= 0)			reveal(board, board_states, x - 1, y - 1, size_x, size_y);
-		}
-	}
-	return false;
-}
-
-//Check to see if all non-bomb tiles are cleared
-bool check_squares(int **board, int **board_states, int size_x, int size_y) {
-	for(int y = 0; y < size_y; y++) {
-		for(int x = 0; x < size_x; x++) {
-			if(board[y][x] < 9 && board_states[y][x] != 1) {
-				return false;	
-			}
-		}
-	}
-
-	return true;
-}
-
-//Reveals remaining bombs after one is tripped
-void reveal_bombs(int **board, int **board_states, int size_x, int size_y) {
-	for(int y = 0; y < size_y; y++) {
-		for(int x = 0; x < size_x; x++) {
-			if(board[y][x] == 9 && board_states[y][x] == 0) {
-				board_states[y][x] = 1;
-			} else if (board_states[y][x] == 2 && board[y][x] < 9) {
-				board_states[y][x] = 3;
-			}
-		}
-	}
-}
-
-//Flags remaining bombs after all other tiles are cleared
-void flag_bombs(int **board, int **board_states, int size_x, int size_y) {
-	for(int y = 0; y < size_y; y++) {
-		for(int x = 0; x < size_x; x++) {
-			if(board[y][x] == 9 && board_states[y][x] == 0) {
-				board_states[y][x] = 2;
-			}
-		}
-	}
 }
 
 
@@ -200,18 +91,18 @@ void draw_cursor(sf::RenderWindow &window, int cursor_x, int cursor_y, int size_
 //Main Function
 int main(int argc, char **argv) {
 	//Setup game parameters
-	int size_x, size_y, bomb_count, scale;
+	int sx, sy, bc, scale;
 
 	if(argc < 3) {
-		size_x = 16;
-		size_y = 16;
+		sx = 16;
+		sy = 16;
 	} else {
-		size_x = std::stoi(argv[1]);
-		size_y = std::stoi(argv[2]);
+		sx = std::stoi(argv[1]);
+		sy = std::stoi(argv[2]);
 	}
 	
-	if(argc < 4) bomb_count = (int)(size_x * size_y * 0.15625);
-	else bomb_count = std::stoi(argv[3]);
+	if(argc < 4) bc = (int)(sx * sy * 0.15625);
+	else bc = std::stoi(argv[3]);
 
 
 	if(argc < 5) scale = 2;
@@ -221,12 +112,14 @@ int main(int argc, char **argv) {
 	bool started = false;
 	bool ended = false;
 	bool won = false;
+
+	//Construct board
+	Board board(sx, sy, bc);
 	
 	//Other
 	int cursor_x = 0, cursor_y = 0, previous_cursor_x = 0, previous_cursor_y = 0;
-	int bombs_left = bomb_count;
-	int window_width = (size_x * tile_size + border * 2) * scale;
-	int window_height = ((size_y + 1) * tile_size + border * 3) * scale;
+	int window_width = (board.size.x * tile_size + border * 2) * scale;
+	int window_height = ((board.size.y + 1) * tile_size + border * 3) * scale;
 	sf::Vector2i previous_mouse;
 	sf::Vector2i current_mouse;
 
@@ -236,21 +129,6 @@ int main(int argc, char **argv) {
 
 	//Setup random seed
 	srand(time(NULL));
-
-
-
-	//Create boards
-	int **board;
-	int **board_states;
-	
-	board = new int *[size_y];
-	board_states = new int *[size_y];
-
-	for(int i = 0; i < size_y; i++) board[i] = new int[size_x];
-	for(int i = 0; i < size_y; i++) board_states[i] = new int[size_x];
-
-	reset_board(board, size_x, size_y);
-	reset_board(board_states, size_x, size_y);
 
 
 
@@ -326,21 +204,21 @@ int main(int argc, char **argv) {
 				}
                 
                 //Clamp cursor and handle selecting face
-				cursor_x = clamp(cursor_x, 0, size_x);
-				cursor_y = clamp(cursor_y, -1, size_y);
+				cursor_x = clamp(cursor_x, 0, board.size.x);
+				cursor_y = clamp(cursor_y, -1, board.size.y);
 				if(cursor_y == -1) {
-					cursor_x = size_x / 2 - 1;
+					cursor_x = board.size.x / 2 - 1;
 				}
 
 
                 //Handle revealing and resetting
 				if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space) ||
 				   sf::Keyboard::isKeyPressed(sf::Keyboard::X) ||
-				   (sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
+				   sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
 					if(cursor_y != -1 && !started &&
 					   !(sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
 					   !mouse_in_tiles(current_mouse, window_width, window_height, scale))) {
-						populate_board(board, size_x, size_y, bomb_count, cursor_x, cursor_y);
+						board.populate(cursor_x, cursor_y);
 						clock.restart();
 
 						started = true;
@@ -349,23 +227,20 @@ int main(int argc, char **argv) {
 					if(cursor_y == -1 && started &&
 					   !(sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
 					   !mouse_on_face(current_mouse, window_width, scale))) {
-						reset_board(board, size_x, size_y);
-						reset_board(board_states, size_x, size_y);
+						board.reset();
 						started = false;
 						ended = false;
 						won = false;
-						bombs_left = bomb_count;
 					} else if(!ended && started &&
 							  !(sf::Mouse::isButtonPressed(sf::Mouse::Left) &&
 							  !mouse_in_tiles(current_mouse, window_width, window_height, scale))) {
-						if(reveal(board, board_states, cursor_x, cursor_y, size_x, size_y)) {
-							reveal_bombs(board, board_states, size_x, size_y);
+						if(board.reveal(cursor_x, cursor_y)) {
+							board.reveal_bombs();
 							ended = true;
 							
 							std::cout << "Ended, bomb tripped." << std::endl;
-						} else if(check_squares(board, board_states, size_x, size_y)) {
-							flag_bombs(board, board_states, size_x, size_y);
-							bombs_left = 0;
+						} else if(board.check_squares()) {
+							board.flag_bombs();
 							won = true;
 							ended = true;
 							
@@ -382,13 +257,7 @@ int main(int argc, char **argv) {
 					if(!ended &&
 					   !(sf::Mouse::isButtonPressed(sf::Mouse::Right) &&
 					   !mouse_in_tiles(current_mouse, window_width, window_height, scale))) {
-						if(board_states[cursor_y][cursor_x] == 0) {
-							board_states[cursor_y][cursor_x] = 2;
-							bombs_left--;
-						} else if(board_states[cursor_y][cursor_x] == 2) {
-							board_states[cursor_y][cursor_x] = 0;
-							bombs_left++;
-						}
+						board.flag(cursor_x, cursor_y);
 					}
 				}
 
@@ -411,7 +280,7 @@ int main(int argc, char **argv) {
 					}
 
 					if(mouse_on_face(current_mouse, window_width, scale)) {
-						cursor_x = size_x / 2 - 1;
+						cursor_x = board.size.x / 2 - 1;
 						cursor_y = -1;
 					}
 			
@@ -442,25 +311,25 @@ int main(int argc, char **argv) {
 		    window.clear();
 
             //Draw tiles
-			for(int y = 0; y < size_y; y++) {
-				for(int x = 0; x < size_x; x++) {
+			for(int y = 0; y < board.size.y; y++) {
+				for(int x = 0; x < board.size.x; x++) {
 					tile_x = border + x * tile_size;
 					tile_y = offset_y + y * tile_size;
 
-					if(board_states[y][x] == 0) {
+					if(board.get_state(x, y) == 0) {
 						draw_sprite(window, tiles[11], tile_x, tile_y, scale);
-					} else if(board_states[y][x] == 2) {
+					} else if(board.get_state(x, y) == 2) {
 						draw_sprite(window, tiles[12], tile_x, tile_y, scale);
-					} else if(board_states[y][x] == 3) {
+					} else if(board.get_state(x, y) == 3) {
 						draw_sprite(window, tiles[13], tile_x, tile_y, scale);
 					} else {
-						draw_sprite(window, tiles[board[y][x]], tile_x, tile_y, scale);
+						draw_sprite(window, tiles[board.get_tile(x, y)], tile_x, tile_y, scale);
 					}
 				}
 			}
 
             //Draw face
-			int face_x = border + (size_x - 1) * tile_size / 2;
+			int face_x = border + (board.size.x - 1) * tile_size / 2;
 
 			if(!ended) {
 				draw_sprite(window, tiles[14], face_x, border, scale);
@@ -471,17 +340,17 @@ int main(int argc, char **argv) {
 			}
 
             //Draw bombs left and timer
-			draw_text(window, text, std::to_string(bombs_left), border, border, scale);
+			draw_text(window, text, board.get_bombs_left(), border, border, scale);
 			if(!started) {
-				draw_text_from_right(window, text, "0", border + size_x * tile_size, border, scale);
+				draw_text_from_right(window, text, "0", border + board.size.x * tile_size, border, scale);
 			} else if(!ended) {
-				draw_text_from_right(window, text, std::to_string((int)clock.getElapsedTime().asSeconds()), border + size_x * tile_size, border, scale);
+				draw_text_from_right(window, text, std::to_string((int)clock.getElapsedTime().asSeconds()), border + board.size.x * tile_size, border, scale);
 			} else {
-				draw_text_from_right(window, text, time_ended, border + size_x * tile_size, border, scale);
+				draw_text_from_right(window, text, time_ended, border + board.size.x * tile_size, border, scale);
 			}
 			
             //Draw cursor
-			draw_cursor(window, cursor_x, cursor_y, size_x, scale);
+			draw_cursor(window, cursor_x, cursor_y, board.size.x, scale);
 			
             //Display frame
 			window.display();
