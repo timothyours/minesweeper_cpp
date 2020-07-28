@@ -7,12 +7,18 @@ To run this program you will need:
 1. CMake
 2. SFML
 
-## Build
-To build and run:  
+## Compile
+To compile, run:  
 
 ```
 cmake .
 make
+```
+
+If you don't want to you can just do:
+
+```
+g++ main.cpp Board.cpp -o minesweeper -lsfml-graphics -lsfml-window -lsfml-system
 ```
 
 ## Parameters
